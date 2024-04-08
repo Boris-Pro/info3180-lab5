@@ -12,6 +12,8 @@ from werkzeug.utils import secure_filename
 
 from app.forms import MovieForm
 from app.models import Movie
+from flask_wtf.csrf import generate_csrf
+from flask import send_from_directory
 
 
 ###
@@ -59,6 +61,32 @@ def movies():
         # Return errors if validation fails
         errors = form_errors(form)
         return jsonify({"errors": errors}), 400
+    
+
+@app.route('/api/v1/csrf-token', methods=['GET'])
+def get_csrf_token():
+    token = generate_csrf()
+    return jsonify({'csrf_token': token})
+
+
+@app.route('/api/v1/movies', methods=['GET'])
+def get_movies():
+    movies = Movie.query.all()
+    movies_list = []
+    for movie in movies:
+        movie_data = {
+            "id": movie.id,
+            "title": movie.title,
+            "description": movie.description,
+            "poster": f"/api/v1/posters/{movie.poster}"
+        }
+        movies_list.append(movie_data)
+    return jsonify({"movies": movies_list})
+
+# Endpoint to serve movie posters
+@app.route('/api/v1/posters/<path:filename>', methods=['GET'])
+def get_poster(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 ###
 # The functions below should be applicable to all Flask apps.
